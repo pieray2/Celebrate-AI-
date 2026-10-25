@@ -1,0 +1,7 @@
+{
+  "name": "CelebrateAI",
+  "description": "GenAI-powered planning assistant to organize weddings, birthdays, anniversaries, and community events with smart budgets in ₹, timelines, vendor checklists, and custom invitations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
