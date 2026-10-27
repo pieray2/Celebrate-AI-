@@ -1,5 +1,4 @@
-import express, { Request, Response } from 'express';
-import { createServer as createViteServer } from 'vite';
+import express, { type Request, type Response } from 'express';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -434,12 +433,19 @@ Return JSON:
 
 // Setup Vite or Static Serving
 async function startServer() {
-  if (process.env.NODE_ENV === 'production' && fs.existsSync(path.resolve(__dirname, 'dist'))) {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
+  const distDir = path.resolve(__dirname, 'dist');
+  const hasDist = fs.existsSync(distDir) && fs.existsSync(path.resolve(distDir, 'index.html'));
+  const isProd = process.env.NODE_ENV === 'production' || !!process.env.K_SERVICE || (!process.env.npm_lifecycle_script?.includes('dev') && hasDist);
+
+  if (hasDist && isProd) {
+    console.log('📦 Serving production build from dist');
+    app.use(express.static(distDir));
     app.get('*', (_req, res) => {
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+      res.sendFile(path.resolve(distDir, 'index.html'));
     });
   } else {
+    console.log('⚡ Starting in development mode with Vite middleware');
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',

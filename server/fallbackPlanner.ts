@@ -1,4 +1,4 @@
-import { AIPlan, BudgetItem, CelebrationEvent, InvitationDraft, TimelineTask, VendorItem } from '../src/types/event';
+import type { AIPlan, BudgetItem, CelebrationEvent, InvitationDraft, TimelineTask, VendorItem } from '../src/types/event.ts';
 
 export function generateFallbackEventPlan(input: {
   eventType: string;
