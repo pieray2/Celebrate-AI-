@@ -52,10 +52,11 @@ export const VendorsTab: React.FC<VendorsTabProps> = ({ event }) => {
   const [newNotes, setNewNotes] = useState('');
 
   // Categories present in the checklist
-  const categories = Array.from(new Set(event.vendorChecklist.map((v) => v.category)));
+  const vendorChecklist = event.vendorChecklist || [];
+  const categories = Array.from(new Set(vendorChecklist.map((v) => v.category)));
 
   // Filter vendors
-  const filteredVendors = event.vendorChecklist.filter((v) => {
+  const filteredVendors = vendorChecklist.filter((v) => {
     if (selectedCategory !== 'All' && v.category !== selectedCategory) return false;
     if (selectedStatus !== 'All' && v.status !== selectedStatus) return false;
     if (searchQuery.trim()) {
@@ -68,7 +69,7 @@ export const VendorsTab: React.FC<VendorsTabProps> = ({ event }) => {
     return true;
   });
 
-  const bookedCount = event.vendorChecklist.filter((v) => v.status === 'Booked').length;
+  const bookedCount = vendorChecklist.filter((v) => v.status === 'Booked').length;
 
   const handleCreateVendor = (e: React.FormEvent) => {
     e.preventDefault();

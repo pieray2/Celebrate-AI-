@@ -52,7 +52,19 @@ export function formatDatePretty(dateString: string): string {
 
 export function getDaysRemaining(targetDateStr: string): { days: number; label: string; isPast: boolean } {
   if (!targetDateStr) return { days: 0, label: 'No date set', isPast: false };
-  const target = new Date(targetDateStr);
+
+  let target: Date;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(targetDateStr)) {
+    const [year, month, day] = targetDateStr.split('-').map(Number);
+    target = new Date(year, month - 1, day);
+  } else {
+    target = new Date(targetDateStr);
+  }
+
+  if (isNaN(target.getTime())) {
+    return { days: 0, label: 'Date invalid', isPast: false };
+  }
+
   const now = new Date();
   target.setHours(0, 0, 0, 0);
   now.setHours(0, 0, 0, 0);
@@ -70,3 +82,4 @@ export function getDaysRemaining(targetDateStr: string): { days: number; label: 
     return { days: Math.abs(diffDays), label: `Celebrated ${Math.abs(diffDays)} days ago`, isPast: true };
   }
 }
+

@@ -78,7 +78,15 @@ export const EventWizardModal: React.FC<EventWizardModalProps> = ({ isOpen, onCl
     if (preset) {
       setTotalBudget(preset.defaultBudget);
       setGuestCount(preset.defaultGuests);
-      if (!title || title.includes('Celebration') || title.includes('Wedding') || title.includes('Birthday')) {
+      const isDefaultTitle = !title || 
+        title.includes('Celebration') || 
+        title.includes('Wedding') || 
+        title.includes('Birthday') || 
+        title.includes('Anniversary') || 
+        title.includes('Mela') || 
+        title.includes('Gala');
+
+      if (isDefaultTitle) {
         setTitle(
           type === 'wedding' ? "Ananya & Kabir's Royal Wedding" :
           type === 'birthday' ? "Mira's Sweet 16 Celebration" :

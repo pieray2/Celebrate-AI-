@@ -79,7 +79,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenWizard }) => {
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 hover:border-amber-400 bg-slate-50/70 hover:bg-amber-50/40 transition-all text-left"
               >
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
                 <div className="max-w-[130px] sm:max-w-[200px] md:max-w-[260px] truncate">
                   <p className="text-xs font-bold text-slate-800 truncate leading-tight">
                     {currentEvent.title}
@@ -88,6 +91,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenWizard }) => {
                     <span>{formatINR(currentEvent.totalBudget, true)}</span>
                     <span>•</span>
                     <span>{currentEvent.guestCount} guests</span>
+                    {countdown && (
+                      <>
+                        <span>•</span>
+                        <span className="text-amber-700 font-medium">{countdown.label}</span>
+                      </>
+                    )}
                   </p>
                 </div>
                 <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 ml-1" />

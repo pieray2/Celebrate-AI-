@@ -140,7 +140,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <div>
                 <p className="text-[11px] text-slate-400 font-medium">Guest Count</p>
                 <p className="text-sm font-bold text-white">{event.guestCount} attendees</p>
-                <p className="text-[11px] text-slate-300">~{formatINR(event.totalBudget / event.guestCount)} / person</p>
+                <p className="text-[11px] text-slate-300">
+                  ~{event.guestCount > 0 ? formatINR(event.totalBudget / event.guestCount) : '₹0'} / person
+                </p>
               </div>
             </div>
 

@@ -70,11 +70,11 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({ event, isOpen, o
     onClose();
   };
 
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+
   const handleDelete = () => {
-    if (confirm(`Are you sure you want to delete the plan for "${event.title}"?`)) {
-      deleteEvent(event.id);
-      onClose();
-    }
+    deleteEvent(event.id);
+    onClose();
   };
 
   return (
@@ -233,14 +233,34 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({ event, isOpen, o
           </div>
 
           {/* Controls */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="text-xs font-semibold text-rose-600 hover:text-rose-800 flex items-center gap-1 cursor-pointer"
-            >
-              <Trash2 className="w-3.5 h-3.5" /> Delete Event
-            </button>
+          <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+            {isConfirmingDelete ? (
+              <div className="flex items-center gap-2 p-1.5 bg-rose-50 border border-rose-200 rounded-xl">
+                <span className="text-xs text-rose-800 font-bold px-1">Delete plan?</span>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Confirm Delete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmingDelete(false)}
+                  className="px-2 py-1 rounded-lg text-slate-600 hover:bg-slate-200 text-xs transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsConfirmingDelete(true)}
+                className="text-xs font-semibold text-rose-600 hover:text-rose-800 flex items-center gap-1 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Delete Event
+              </button>
+            )}
 
             <div className="flex items-center gap-2">
               <button

@@ -146,7 +146,11 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       });
 
       const data = await res.json();
-      const generatedPlan = data.plan;
+      const generatedPlan = data?.plan;
+
+      if (!generatedPlan || !generatedPlan.aiPlan) {
+        throw new Error('Invalid plan data received from server');
+      }
 
       const newEvent: CelebrationEvent = {
         id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -156,7 +160,7 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         location: params.location,
         guestCount: params.guestCount,
         totalBudget: params.totalBudget,
-        theme: params.theme || generatedPlan.aiPlan.themeConcept.title,
+        theme: params.theme || generatedPlan.aiPlan?.themeConcept?.title || 'Celebration',
         colors: params.colors,
         style: params.style,
         setting: params.setting,
@@ -164,10 +168,10 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         aiPlan: generatedPlan.aiPlan,
-        budgetItems: generatedPlan.budgetItems,
-        timelineTasks: generatedPlan.timelineTasks,
-        vendorChecklist: generatedPlan.vendorChecklist,
-        invitations: generatedPlan.invitations,
+        budgetItems: generatedPlan.budgetItems || [],
+        timelineTasks: generatedPlan.timelineTasks || [],
+        vendorChecklist: generatedPlan.vendorChecklist || [],
+        invitations: generatedPlan.invitations || [],
       };
 
       const updatedList = [newEvent, ...events];
@@ -213,16 +217,20 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       });
 
       const data = await res.json();
-      const plan = data.plan;
+      const plan = data?.plan;
+
+      if (!plan || !plan.aiPlan) {
+        throw new Error('Invalid plan data received during regeneration');
+      }
 
       const updated: CelebrationEvent = {
         ...target,
         updatedAt: new Date().toISOString(),
         aiPlan: plan.aiPlan,
-        budgetItems: plan.budgetItems,
-        timelineTasks: plan.timelineTasks,
-        vendorChecklist: plan.vendorChecklist,
-        invitations: plan.invitations.length > 0 ? plan.invitations : target.invitations,
+        budgetItems: plan.budgetItems || target.budgetItems,
+        timelineTasks: plan.timelineTasks || target.timelineTasks,
+        vendorChecklist: plan.vendorChecklist || target.vendorChecklist,
+        invitations: (plan.invitations && plan.invitations.length > 0) ? plan.invitations : target.invitations,
       };
 
       const updatedList = events.map((e) => (e.id === id ? updated : e));

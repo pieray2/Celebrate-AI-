@@ -40,9 +40,17 @@ export const InvitationsTab: React.FC<InvitationsTabProps> = ({ event }) => {
     setTimeout(() => setCopiedId(null), 2500);
   };
 
-  const handleWhatsAppShare = (content: string) => {
+  const handleWhatsAppShare = (content: string, draftId: string) => {
+    navigator.clipboard.writeText(content);
+    setCopiedId(draftId);
+    setTimeout(() => setCopiedId(null), 2500);
+
     const encoded = encodeURIComponent(content);
-    window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
+    try {
+      window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank', 'noopener,noreferrer');
+    } catch {
+      // In strict sandboxed iframes where window.open is blocked, content is already copied
+    }
   };
 
   const handleGenerateCustomInvite = async (e: React.FormEvent) => {
@@ -172,12 +180,12 @@ export const InvitationsTab: React.FC<InvitationsTabProps> = ({ event }) => {
 
       {/* Generated Invitation Drafts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {event.invitations.length === 0 ? (
+        {(!event.invitations || event.invitations.length === 0) ? (
           <div className="col-span-full bg-white rounded-3xl p-10 text-center border border-slate-200 text-slate-400 text-xs">
             No invitation drafts yet. Click "Generate New Draft" above!
           </div>
         ) : (
-          event.invitations.map((draft) => {
+          (event.invitations || []).map((draft) => {
             const isCopied = copiedId === draft.id;
 
             return (
@@ -232,7 +240,7 @@ export const InvitationsTab: React.FC<InvitationsTabProps> = ({ event }) => {
                 {/* Footer Action Buttons */}
                 <div className="flex items-center justify-between gap-3 mt-5 pt-3 border-t border-slate-100">
                   <button
-                    onClick={() => handleWhatsAppShare(draft.content)}
+                    onClick={() => handleWhatsAppShare(draft.content, draft.id)}
                     className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />

@@ -60,14 +60,17 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({ event }) => {
   const [newItemNotes, setNewItemNotes] = useState('');
 
   // Calculations
+  const budgetItems = event.budgetItems || [];
   const totalBudget = event.totalBudget || 0;
-  const totalEstimated = event.budgetItems.reduce((acc, item) => acc + (item.estimatedCost || 0), 0);
-  const totalActual = event.budgetItems.reduce((acc, item) => acc + (item.actualCost || 0), 0);
+  const totalEstimated = budgetItems.reduce((acc, item) => acc + (item.estimatedCost || 0), 0);
+  const totalActual = budgetItems.reduce((acc, item) => acc + (item.actualCost ?? 0), 0);
   
-  // Use actual costs if entered, otherwise estimated
-  const totalProjected = event.budgetItems.reduce((acc, item) => {
-    return acc + (item.actualCost !== undefined && item.actualCost > 0 ? item.actualCost : (item.estimatedCost || 0));
-  }, 0);
+  // Use actual costs if specified (including 0 for free/negotiated items), otherwise estimated
+  const getItemEffectiveCost = (item: BudgetItem) => {
+    return item.actualCost !== undefined && item.actualCost !== null ? item.actualCost : (item.estimatedCost || 0);
+  };
+
+  const totalProjected = budgetItems.reduce((acc, item) => acc + getItemEffectiveCost(item), 0);
 
   const remainingBudget = totalBudget - totalProjected;
   const isOverBudget = remainingBudget < 0;
@@ -76,17 +79,18 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({ event }) => {
 
   // Filter items
   const filteredItems = selectedCategoryFilter === 'All'
-    ? event.budgetItems
-    : event.budgetItems.filter((i) => i.category === selectedCategoryFilter);
+    ? budgetItems
+    : budgetItems.filter((i) => i.category === selectedCategoryFilter);
 
   // Category totals
   const categorySummary = CATEGORIES.map((cat) => {
-    const items = event.budgetItems.filter((i) => i.category === cat);
+    const items = budgetItems.filter((i) => i.category === cat);
     const estSum = items.reduce((acc, i) => acc + (i.estimatedCost || 0), 0);
-    const actSum = items.reduce((acc, i) => acc + (i.actualCost || i.estimatedCost || 0), 0);
+    const actSum = items.reduce((acc, i) => acc + getItemEffectiveCost(i), 0);
     const count = items.length;
     return { category: cat, estSum, actSum, count };
   }).filter((c) => c.count > 0);
+
 
   const handleSaveNewItem = (e: React.FormEvent) => {
     e.preventDefault();
@@ -278,7 +282,7 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({ event }) => {
           ) : (
             filteredItems.map((item) => {
               const isPaid = !!item.isPaid;
-              const effectiveCost = item.actualCost !== undefined && item.actualCost > 0 ? item.actualCost : item.estimatedCost;
+              const effectiveCost = (item.actualCost !== undefined && item.actualCost !== null) ? item.actualCost : item.estimatedCost;
 
               return (
                 <div 
@@ -336,7 +340,7 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({ event }) => {
                         {formatINR(effectiveCost)}
                       </p>
                       <p className="text-[11px] text-slate-400">
-                        {item.actualCost ? `Est: ${formatINR(item.estimatedCost)}` : 'Estimated'}
+                        {item.actualCost !== undefined && item.actualCost !== null ? `Est: ${formatINR(item.estimatedCost)}` : 'Estimated'}
                       </p>
                     </div>
 

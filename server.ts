@@ -17,6 +17,25 @@ const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '10mb' }));
 
+// Robust JSON extraction helper for LLM responses
+function safeParseJSON<T>(text: string | undefined | null, fallback: T): T {
+  if (!text) return fallback;
+  const cleaned = text.trim().replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    try {
+      const match = text.match(/\{[\s\S]*\}/) || text.match(/\[[\s\S]*\]/);
+      if (match) {
+        return JSON.parse(match[0]);
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return fallback;
+}
+
 // Helper to get GoogleGenAI client
 function getGeminiClient(): GoogleGenAI | null {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -206,17 +225,9 @@ Return ONLY a valid JSON object matching this exact structure:
     });
 
     const rawText = response.text || '{}';
-    let parsedData;
-    try {
-      parsedData = JSON.parse(rawText);
-    } catch (parseErr) {
-      console.error('Failed to parse Gemini JSON response, extracting via regex:', parseErr);
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsedData = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('Unable to extract valid JSON from model response');
-      }
+    const parsedData: any = safeParseJSON(rawText, null);
+    if (!parsedData || !parsedData.themeConcept) {
+      throw new Error('Unable to extract valid structured JSON from model response');
     }
 
     const aiPlan = {
@@ -271,15 +282,22 @@ Return ONLY a valid JSON object matching this exact structure:
 // 2. Interactive AI Concierge Assistant Route
 app.post('/api/plan/assistant-chat', async (req: Request, res: Response) => {
   try {
-    const { event, question, conversationHistory } = req.body;
+    const { event, question } = req.body;
+    const ev = event || {};
+    const title = ev.title || 'Celebration';
+    const eventType = ev.eventType || 'event';
+    const eventDate = ev.eventDate || 'Upcoming';
+    const location = ev.location || 'Location';
+    const guestCount = ev.guestCount || 50;
+    const totalBudget = ev.totalBudget || 100000;
     const ai = getGeminiClient();
 
     if (!ai) {
       return res.json({
-        reply: `Here is a practical recommendation for your ${event?.eventType || 'event'}:\n\n` +
-          `1. Budget Optimization: For a total budget of ₹${(event?.totalBudget || 100000).toLocaleString('en-IN')}, make sure catering and venue don't exceed 60% of total allocation.\n` +
-          `2. Guest Experience: With ${event?.guestCount || 50} guests, prioritize swift welcome drinks and personal greetings.\n` +
-          `3. Timeline: Reconfirm with all major vendors 72 hours before ${event?.eventDate || 'event day'}.\n\n` +
+        reply: `Here is a practical recommendation for your ${eventType}:\n\n` +
+          `1. Budget Optimization: For a total budget of ₹${totalBudget.toLocaleString('en-IN')}, make sure catering and venue don't exceed 60% of total allocation.\n` +
+          `2. Guest Experience: With ${guestCount} guests, prioritize swift welcome drinks and personal greetings.\n` +
+          `3. Timeline: Reconfirm with all major vendors 72 hours before ${eventDate}.\n\n` +
           `(Note: Connect your GEMINI_API_KEY in Settings > Secrets for live interactive answers!)`,
         suggestedActions: [
           'Review Catering budget allocation',
@@ -292,19 +310,19 @@ app.post('/api/plan/assistant-chat', async (req: Request, res: Response) => {
 The user is asking a question about their planned event.
 
 Event Context:
-- Title: ${event.title}
-- Type: ${event.eventType}
-- Date: ${event.eventDate}
-- Location: ${event.location}
-- Guests: ${event.guestCount}
-- Total Budget: ₹${event.totalBudget?.toLocaleString('en-IN')}
-- Theme: ${event.theme}
-- Colors: ${event.colors}
-- Style: ${event.style}
-- Setting: ${event.setting}
-- Special Notes: ${event.specialRequirements || 'None'}
+- Title: ${title}
+- Type: ${eventType}
+- Date: ${eventDate}
+- Location: ${location}
+- Guests: ${guestCount}
+- Total Budget: ₹${totalBudget.toLocaleString('en-IN')}
+- Theme: ${ev.theme || 'Elegant'}
+- Colors: ${ev.colors || 'Festive'}
+- Style: ${ev.style || 'Celebratory'}
+- Setting: ${ev.setting || 'Indoor'}
+- Special Notes: ${ev.specialRequirements || 'None'}
 
-User Question: "${question}"
+User Question: "${question || 'How should I optimize my event?'}"
 
 Provide a warm, highly actionable, concise, and structured answer (under 300 words). Include practical bullet points, realistic Indian rupee (₹) pricing if cost is involved, and 2 quick follow-up suggested action chips.
 
@@ -323,7 +341,11 @@ Return JSON:
       },
     });
 
-    const parsed = JSON.parse(response.text || '{}');
+    const parsed = safeParseJSON(response.text, {
+      reply: 'Here are key recommendations tailored for your celebration.',
+      suggestedActions: ['Check budget', 'Update timeline'],
+    });
+
     return res.json({
       reply: parsed.reply || 'Here is our advice for your event...',
       suggestedActions: parsed.suggestedActions || ['Check budget', 'Update timeline'],
@@ -331,36 +353,45 @@ Return JSON:
   } catch (err: any) {
     console.error('Error in /api/plan/assistant-chat:', err);
     return res.json({
-      reply: 'We encountered a momentary glitch connecting to AI Concierge. Please try again or adjust your prompt!',
-      suggestedActions: ['Try rephrasing', 'Check vendor checklist'],
+      reply: 'Here is a quick planning tip: Ensure key vendor contracts are confirmed 2 weeks in advance and maintain a 5% contingency reserve in your budget!',
+      suggestedActions: ['Review budget', 'Check timeline'],
     });
   }
 });
 
 // 3. Custom Invitation & Toast Generator Route
 app.post('/api/plan/custom-invite', async (req: Request, res: Response) => {
+  const { event, inviteType, tone, specificNames } = req.body;
+  const ev = event || {};
+  const evTitle = ev.title || 'Special Celebration';
+  const evType = ev.eventType || 'event';
+  const evDate = ev.eventDate || 'Upcoming date';
+  const evLocation = ev.location || 'Celebration Venue';
+  const evTheme = ev.theme || 'Celebration';
+
   try {
-    const { event, inviteType, tone, specificNames } = req.body;
     const ai = getGeminiClient();
 
     if (!ai) {
       return res.json({
-        content: `🎉 Save the Date for ${event.title}! 🎉\n\n` +
-          `Join us on ${event.eventDate} at ${event.location} for an unforgettable ${event.eventType} celebration.\n\n` +
+        title: `${inviteType || 'Celebration'} Invitation`,
+        content: `🎉 Save the Date for ${evTitle}! 🎉\n\n` +
+          `Join us on ${evDate} at ${evLocation} for an unforgettable ${evType} celebration.\n\n` +
           `Time: 6:00 PM onwards\n` +
-          `Theme: ${event.theme}\n\n` +
-          `Kindly RSVP at your earliest convenience! ✨`,
-        hashtags: [`#Celebrate${event.eventType}`, `#SaveTheDate`],
+          `Theme: ${evTheme}\n\n` +
+          `Kindly RSVP at your earliest convenience! ✨\n\n` +
+          `Warmly,\n${specificNames || 'The Host & Family'}`,
+        hashtags: [`#Celebrate${evType}`, `#SaveTheDate`],
       });
     }
 
     const prompt = `Generate a creative, beautifully written invitation or speech for this celebration:
-- Event: ${event.title} (${event.eventType})
-- Date: ${event.eventDate}
-- Venue: ${event.location}
-- Guest Count: ${event.guestCount}
-- Theme: ${event.theme}
-- Colors: ${event.colors}
+- Event: ${evTitle} (${evType})
+- Date: ${evDate}
+- Venue: ${evLocation}
+- Guest Count: ${ev.guestCount || 50}
+- Theme: ${evTheme}
+- Colors: ${ev.colors || 'Festive'}
 - Requested Format: ${inviteType || 'WhatsApp invitation'} (e.g. WhatsApp Broadcast, Formal Printed Invitation, Quirky Friend Card, Event Day Toast/Speech)
 - Tone: ${tone || 'Warm & Celebratory'}
 - Specific Names / Hosts: ${specificNames || 'The Hosts & Family'}
@@ -380,11 +411,24 @@ Return JSON:
       },
     });
 
-    const parsed = JSON.parse(response.text || '{}');
+    const parsed = safeParseJSON(response.text, {
+      title: `${inviteType || 'Celebration'} Invitation`,
+      content: `🎉 You are cordially invited to ${evTitle} on ${evDate} at ${evLocation}! ✨`,
+      hashtags: [`#Celebrate${evType}`, `#SaveTheDate`],
+    });
+
     return res.json(parsed);
   } catch (err: any) {
     console.error('Error in /api/plan/custom-invite:', err);
-    return res.status(500).json({ error: 'Failed to generate invitation' });
+    return res.json({
+      title: `${inviteType || 'Celebration'} Invitation`,
+      content: `✨ Save the Date for ${evTitle}! ✨\n\n` +
+        `We would love your presence as we celebrate this joyous milestone on ${evDate} at ${evLocation}.\n\n` +
+        `Theme: ${evTheme}\n` +
+        `Time: 6:00 PM onwards\n\n` +
+        `RSVP: ${specificNames || 'The Host Family'}`,
+      hashtags: [`#Celebrate${evType}`, `#SaveTheDate`],
+    });
   }
 });
 

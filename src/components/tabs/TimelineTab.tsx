@@ -54,26 +54,40 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ event }) => {
   const [newNotes, setNewNotes] = useState('');
 
   // Metrics
-  const totalTasks = event.timelineTasks.length;
-  const completedTasks = event.timelineTasks.filter((t) => t.completed).length;
+  const timelineTasks = event.timelineTasks || [];
+  const totalTasks = timelineTasks.length;
+  const completedTasks = timelineTasks.filter((t) => t.completed).length;
   const percentCompleted = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   // Filter tasks
-  const filteredTasks = event.timelineTasks.filter((task) => {
+  const filteredTasks = timelineTasks.filter((task) => {
     if (filterStatus === 'pending' && task.completed) return false;
     if (filterStatus === 'completed' && !task.completed) return false;
     if (filterPriority !== 'all' && task.priority !== filterPriority) return false;
     return true;
   });
 
-  // Group by phase
-  const tasksByPhase: Record<string, TimelineTask[]> = {};
+  // Group by phase with chronological ordering
+  const rawTasksByPhase: Record<string, TimelineTask[]> = {};
   filteredTasks.forEach((task) => {
     const phaseKey = task.phase || 'General Preparations';
-    if (!tasksByPhase[phaseKey]) {
-      tasksByPhase[phaseKey] = [];
+    if (!rawTasksByPhase[phaseKey]) {
+      rawTasksByPhase[phaseKey] = [];
     }
-    tasksByPhase[phaseKey].push(task);
+    rawTasksByPhase[phaseKey].push(task);
+  });
+
+  // Sort phases according to PHASES order
+  const tasksByPhase: Record<string, TimelineTask[]> = {};
+  PHASES.forEach((p) => {
+    if (rawTasksByPhase[p]) {
+      tasksByPhase[p] = rawTasksByPhase[p];
+    }
+  });
+  Object.keys(rawTasksByPhase).forEach((p) => {
+    if (!tasksByPhase[p]) {
+      tasksByPhase[p] = rawTasksByPhase[p];
+    }
   });
 
   const handleCreateTask = (e: React.FormEvent) => {

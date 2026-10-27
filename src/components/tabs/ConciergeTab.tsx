@@ -23,29 +23,32 @@ interface Message {
   actions?: string[];
 }
 
+const getInitialMessage = (ev: CelebrationEvent): Message => ({
+  id: `init-${ev.id}`,
+  sender: 'ai',
+  text: `Hello! I am your CelebrateAI Planning Concierge for **${ev.title}**.\n\n` +
+    `I have full context on your **${ev.eventType}** in ${ev.location}, with a budget of ₹${(ev.totalBudget || 0).toLocaleString('en-IN')} and ${ev.guestCount} guests.\n\n` +
+    `How can I assist your celebration planning today?`,
+  timestamp: 'Just now',
+  actions: [
+    'How to cut 10% budget without compromising guest experience?',
+    'Suggest 4 unique photo-booth concepts',
+    'Weather contingency plan for outdoor venue',
+    'What fun games work best for this crowd?'
+  ]
+});
+
 export const ConciergeTab: React.FC<ConciergeTabProps> = ({ event }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'init-1',
-      sender: 'ai',
-      text: `Hello! I am your CelebrateAI Planning Concierge for **${event.title}**. 
-
-I have full context on your **${event.eventType}** in ${event.location}, with a budget of ₹${(event.totalBudget || 0).toLocaleString('en-IN')} and ${event.guestCount} guests.
-
-How can I assist your celebration planning today?`,
-      timestamp: 'Just now',
-      actions: [
-        'How to cut 10% budget without compromising guest experience?',
-        'Suggest 4 unique photo-booth concepts',
-        'Weather contingency plan for outdoor venue',
-        'What fun games work best for this crowd?'
-      ]
-    }
-  ]);
-
+  const [messages, setMessages] = useState<Message[]>([getInitialMessage(event)]);
   const [inputQuestion, setInputQuestion] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+
+  // Sync messages when active event changes
+  useEffect(() => {
+    setMessages([getInitialMessage(event)]);
+  }, [event.id]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
